@@ -102,7 +102,7 @@ class VAE(torch.nn.Module):
 
         x_probs = x_probs.reshape(batch_size, n_samples_per_z, -1)
         x_probs = torch.mean(x_probs, dim=[1])
-        
+        x_probs = x_probs.view(-1,1,self.img_w, self.img_w)
 
         return {
             "imgs": x_probs,

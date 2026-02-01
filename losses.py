@@ -25,5 +25,6 @@ def loss_func(output, x, coeff=1e-3):
     mse = torch.nn.MSELoss(reduction='none')
     analytical_KL = loss_KL_wo_E(output)
     err = mse(output['imgs'], x)
-    elbo = torch.sum(err, dim=[1]) + coeff * analytical_KL
+    err = torch.mean(err, dim=[1,2,3])
+    elbo = err + coeff * analytical_KL
     return -1.0 *torch.mean(elbo)
