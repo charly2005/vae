@@ -18,9 +18,7 @@ class VAE(torch.nn.Module):
         self.img_w = int(input_dim**0.5)
         self.z_size = hidden_dims[-1] // 2
 
-        ##################
-        ### Problem 2(b): finish the implementation for encoder and decoder
-        ##################
+
         enc_layers = OrderedDict()
         dec_layers = OrderedDict()
         
@@ -37,6 +35,7 @@ class VAE(torch.nn.Module):
         enc_layers[f"flatten"] = torch.nn.Flatten()
         self.encoder = torch.nn.Sequential(enc_layers)
         
+        # https://discuss.pytorch.org/t/how-to-automatically-get-in-features-from-nn-conv2d-to-nn-linear/27385
         with torch.no_grad():
             dummy_input = torch.zeros(1, 1, self.img_w, self.img_w)
             dummy_output = self.encoder(dummy_input)
