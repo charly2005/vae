@@ -21,10 +21,18 @@ def loss_KL_wo_E(output):
                             + var - 1.0 - logvar,
                             dim=[1])
 
-def loss_func(output, x, coeff=1e-3):
+def loss_func(output, x, reg = loss_KL_wo_E, coeff=1e-3):
     mse = torch.nn.MSELoss(reduction='none')
-    analytical_KL = loss_KL_wo_E(output)
+    analytical_KL = reg(output)
     err = mse(output['imgs'], x)
     err = torch.mean(err, dim=[1,2,3])
+    elbo = err - coeff * analytical_KL
+    return torch.mean(elbo)
+
+def point_loss(output, x, reg = loss_KL_wo_E, coeff=1e-3):
+    mse = torch.nn.MSELoss(reduction='none')
+    analytical_KL = reg(output)
+    err = mse(output['imgs'], x)
+    err = torch.mean(err, dim=[1])
     elbo = err - coeff * analytical_KL
     return torch.mean(elbo)

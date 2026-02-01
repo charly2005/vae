@@ -18,6 +18,7 @@ class VAE(torch.nn.Module):
         super().__init__()
         self.img_w = int(input_dim**0.5)
         self.z_size = hidden_dims[-1] // 2
+        self.decode_dim = decode_dim
 
         enc_layers = OrderedDict()
         dec_layers = OrderedDict()
@@ -69,8 +70,6 @@ class VAE(torch.nn.Module):
         self.decoder = torch.nn.Sequential(dec_layers)
 
     def encode(self, x):
-        if x.dim() == 2:
-            x = x.view(-1, 1, self.img_w, self.img_w)
         # take fc layer w output channels self.z_size *2 and split it into 2 separate layers
         mean, logvar = torch.split(self.encoder(x), split_size_or_sections=[self.z_size, self.z_size], dim=-1)
         return mean, logvar
@@ -102,7 +101,10 @@ class VAE(torch.nn.Module):
 
         x_probs = x_probs.reshape(batch_size, n_samples_per_z, -1)
         x_probs = torch.mean(x_probs, dim=[1])
-        x_probs = x_probs.view(-1,1,self.img_w, self.img_w)
+        if self.decode_dim != -1:
+            x_probs = x_probs.view(-1, self.decode_dim)
+        else:
+            x_probs = x_probs.view(-1, 1, self.img_w, self.img_w)
 
         return {
             "imgs": x_probs,
