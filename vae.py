@@ -7,6 +7,7 @@ from torch.nn import BatchNorm2d as BatchNorm2d
 from torch.nn import ConvTranspose2d as ConvT2d
 import torch.nn.functional as F
 from torch.nn import Linear
+
 class VAE(torch.nn.Module):
     def __init__(self, input_dim, hidden_dims, decode_dim=-1, use_sigmoid=True):
         '''
@@ -18,13 +19,12 @@ class VAE(torch.nn.Module):
         self.img_w = int(input_dim**0.5)
         self.z_size = hidden_dims[-1] // 2
 
-
         enc_layers = OrderedDict()
         dec_layers = OrderedDict()
         
         self.relu = torch.nn.ReLU()
         self.sigmoid = torch.nn.Sigmoid()
-
+        # 1 for gray scale, 3 for rgb
         curr_ch = 1
 
         for i, h_dim in enumerate(hidden_dims[:-1]):
@@ -32,7 +32,6 @@ class VAE(torch.nn.Module):
           enc_layers[f"relu_{i}"] = self.relu
           curr_ch = h_dim
 
-        enc_layers[f"flatten"] = torch.nn.Flatten()
         self.encoder = torch.nn.Sequential(enc_layers)
         
         # https://discuss.pytorch.org/t/how-to-automatically-get-in-features-from-nn-conv2d-to-nn-linear/27385
@@ -40,19 +39,26 @@ class VAE(torch.nn.Module):
             dummy_input = torch.zeros(1, 1, self.img_w, self.img_w)
             dummy_output = self.encoder(dummy_input)
             
-            flat_ch = dummy_output.view(1, -1).shape[1]
+            flat_ch = dummy_output.shape[1]
+            feature_w = dummy_output.shape[2]
 
-        feature_w = self.img_w // (2 ** len(hidden_dims))
+        enc_layers[f"flatten"] = torch.nn.Flatten()
 
-        enc_layers[f"fc"] = Linear(flat_ch, self.z_size * 2) 
+        flat_size = flat_ch * feature_w * feature_w
+        enc_layers[f"fc"] = Linear(flat_size, self.z_size * 2) 
         self.encoder = torch.nn.Sequential(enc_layers)
 
-        dec_layers[f"fc"] = Linear(self.z_size, curr_ch * (feature_w)**2,)
-        dec_layers[f"unflatten"] = torch.nn.Unflatten(1, (curr_ch, feature_w, feature_w))
-        reversed_dim = hidden_dims[:-1][::-1] + [1]
-
-        for i, h_dim in enumerate(reversed_dim):
-            dec_layers[f"conv_{i}"] = ConvT2d(curr_ch, h_dim, kernel_size=3,stride=2,output_padding=1)
+        dec_layers[f"fc"] = Linear(self.z_size, flat_size)
+        dec_layers[f"relu_fc"] = self.relu
+        dec_layers[f"unflatten"] = torch.nn.Unflatten(1, (flat_ch, feature_w, feature_w))
+        
+        reversed_dim = hidden_dims[:-1][::-1]
+        curr_ch = flat_ch
+        
+        for i in range(len(reversed_dim)):
+            h_dim = reversed_dim[i+1] if (i < len(reversed_dim) - 1) else 1
+            out_pad = 0 if i == 0 else 1
+            dec_layers[f"conv_{i}"] = ConvT2d(curr_ch, h_dim, kernel_size=3,stride=2,padding =1,output_padding=out_pad)
             if i < len(reversed_dim) - 1:
                 dec_layers[f"relu_{i}"] = self.relu
             else:
@@ -96,6 +102,7 @@ class VAE(torch.nn.Module):
 
         x_probs = x_probs.reshape(batch_size, n_samples_per_z, -1)
         x_probs = torch.mean(x_probs, dim=[1])
+        
 
         return {
             "imgs": x_probs,

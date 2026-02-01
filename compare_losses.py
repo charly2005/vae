@@ -1,19 +1,23 @@
 import torch
 from torchvision import datasets
 from torchvision import transforms
+import matplotlib
 import matplotlib.pyplot as plt
 from tqdm.notebook import tqdm
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
-
+import os
 from losses import loss_SGVB, loss_KL_wo_E
 from vae import VAE
+
+# save plot to file
+matplotlib.use('Agg')
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 tensor_transform = transforms.ToTensor()
 
-batch_size = 256
+batch_size = 16
 MNIST_data = datasets.MNIST(root = "./data",
 							train = True,
 							download = True,
@@ -59,6 +63,10 @@ plt.legend()
 plt.grid(True)
 plt.show()
 
+save_folder = "assets"
+file = "loss_comparison.png"
+path = os.path.join(save_folder, file)
+plt.savefig(path)
 
 if __name__ == "__main__":
     pass

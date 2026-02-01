@@ -20,3 +20,10 @@ def loss_KL_wo_E(output):
     return -0.5 * torch.sum(torch.pow(mean, 2)
                             + var - 1.0 - logvar,
                             dim=[1])
+
+def loss_func(output, x, coeff=1e-3):
+    mse = torch.nn.MSELoss(reduction='none')
+    analytical_KL = loss_KL_wo_E(output)
+    err = mse(output['imgs'], x)
+    elbo = torch.sum(err, dim=[1]) + coeff * analytical_KL
+    return -1.0 *torch.mean(elbo)
